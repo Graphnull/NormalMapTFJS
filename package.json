@@ -1,0 +1,29 @@
+{
+  "name": "normalmaptfjs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Graphnull/NormalMapTFJS.git"
+  },
+  "keywords": [
+    "tensorflow",
+    "tfjs",
+    "tensorflowjs",
+    "ml",
+    "cv"
+  ],
+  "author": "graphnull",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Graphnull/NormalMapTFJS/issues"
+  },
+  "homepage": "https://github.com/Graphnull/NormalMapTFJS#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}

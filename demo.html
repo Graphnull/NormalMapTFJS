@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+</head>
+<video id='video'></video>
+<canvas id='result'></canvas>
+<script>
+    let inited = false
+    let init = (async () => {
+
+        if (inited) {
+            return;
+        }
+        inited = true;
+        let textElement = document.getElementById('but')
+        textElement.innerHTML = 'started'
+        console.log(tf)
+        await tf.setBackend('cpu')
+        let model = await tf.loadLayersModel('/model/model.json')
+        textElement.innerHTML = 'loaded'
+        console.log(model);
+        let stream = await navigator.mediaDevices.getUserMedia({ video: {width:1024, height:768} })
+
+        textElement.innerHTML = 'capture'
+        let video = document.getElementById('video')
+        video.srcObject = stream;
+        await video.play()
+        let canvas = document.getElementById('result')
+        let ctx = canvas.getContext('2d');
+
+        let update = () => {
+            tf.tidy(() => {
+                try {
+                    let image = tf.browser.fromPixels(video).expandDims()
+                    if(image.shape[2]!==1024|| image.shape[1]!==768){
+                        image = tf.image.resizeBilinear(image, [768, 1024])
+                    }
+                    let result = model.predict(image);
+                    tf.browser.toPixels(result, canvas);
+                    requestAnimationFrame(update)
+                } catch (err) {
+
+                    textElement.innerHTML = err.message
+                }
+            })
+        }
+
+        requestAnimationFrame(update)
+
+    })
+
+</script>
+<div id="but" onclick="init().catch(err=>{document.body.innerText= err.message})">play</div>
+
+</html>
