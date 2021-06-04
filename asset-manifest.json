@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/Graphnull/NormalMapTFJSstatic/css/main.9d5b29c0.chunk.css",
+    "main.js": "/Graphnull/NormalMapTFJSstatic/js/main.3df43b45.chunk.js",
+    "main.js.map": "/Graphnull/NormalMapTFJSstatic/js/main.3df43b45.chunk.js.map",
+    "runtime-main.js": "/Graphnull/NormalMapTFJSstatic/js/runtime-main.f41a8192.js",
+    "runtime-main.js.map": "/Graphnull/NormalMapTFJSstatic/js/runtime-main.f41a8192.js.map",
+    "static/js/2.8906987b.chunk.js": "/Graphnull/NormalMapTFJSstatic/js/2.8906987b.chunk.js",
+    "static/js/2.8906987b.chunk.js.map": "/Graphnull/NormalMapTFJSstatic/js/2.8906987b.chunk.js.map",
+    "static/js/3.498f0002.chunk.js": "/Graphnull/NormalMapTFJSstatic/js/3.498f0002.chunk.js",
+    "static/js/3.498f0002.chunk.js.map": "/Graphnull/NormalMapTFJSstatic/js/3.498f0002.chunk.js.map",
+    "index.html": "/Graphnull/NormalMapTFJSindex.html",
+    "static/css/main.9d5b29c0.chunk.css.map": "/Graphnull/NormalMapTFJSstatic/css/main.9d5b29c0.chunk.css.map",
+    "static/js/2.8906987b.chunk.js.LICENSE.txt": "/Graphnull/NormalMapTFJSstatic/js/2.8906987b.chunk.js.LICENSE.txt",
+    "static/media/logo.6ce24c58.svg": "/Graphnull/NormalMapTFJSstatic/media/logo.6ce24c58.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.f41a8192.js",
+    "static/js/2.8906987b.chunk.js",
+    "static/css/main.9d5b29c0.chunk.css",
+    "static/js/main.3df43b45.chunk.js"
+  ]
+}
