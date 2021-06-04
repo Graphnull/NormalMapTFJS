@@ -21,6 +21,7 @@ sudo node index
 ```
 
 # examples
+input | output | Ground Truth
 
 ![Screenshot](images/0.png)
 ![Screenshot](images/1.png)
