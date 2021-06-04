@@ -3,22 +3,8 @@
 Normal map from rgb image
 
 # Demo
+!(https://graphnull.github.io/NormalMapTFJS/)
 
-generate https keys
-
-```
-cd httpsKeys
-```
-
-```
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./selfsigned.key -out selfsigned.crt
-```
-
-run demo server
-
-```
-sudo node index
-```
 
 # examples
 input | output | Ground Truth
