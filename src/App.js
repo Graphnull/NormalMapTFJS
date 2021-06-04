@@ -70,7 +70,7 @@ class App extends React.Component {
         <video id='video'></video>
         <canvas id='result'></canvas>
         <div id="but" onClick={()=>{
-          this.init().catch(err=>{document.body.innerText= err.message})
+          this.init().catch(err=>{console.error(err);document.body.innerText= err.message})
         }}>Play</div>
       </div>
     );
