@@ -97,7 +97,7 @@ class App extends React.Component {
       //video.srcObject = stream;
       //await video.play()
       let canvas = document.getElementById('result')
-      let ctx = canvas.getContext('2d');
+      let canvas2 = document.getElementById('result2')
       let current = tf.zeros([1, height, width, 3]);
       let pred = tf.zeros([1, height, width, 3]);
 
@@ -117,20 +117,32 @@ class App extends React.Component {
       let ctime = 0;
 
 
-      let nv = true;
+      let nv = false;
       const squareAndAddKernel = inputShape => {
         let [count, height, width, channels] = inputShape
         return {
-          variableNames: ['X', 'Y'],
+          variableNames: ['PRED', 'NEXT'],
           outputShape: inputShape.slice(),
           userCode: `
           void main() {
             ivec4 coords = getOutputCoords();
-            vec2 uv = vec2(coords.zy) / vec2(${width}.0, ${height}.0);
-              vec4 values = ${glsl.texture2D}(X, uv);
-              float x = getXAtOutCoords();
-              float value = uv.x;
-              setOutput(values.x);
+            //14, 35, 49
+            int dx = coords.z;
+            int dy = coords.w;
+
+            float acc = 0.0;
+            for(int y=0;y!=7;y++){
+              for(int x = 0;x!=7;x++){
+                float r = getPRED(coords.x*7+3+x,coords.y*7+3+y,0);
+                float g = getPRED(coords.x*7+3+x,coords.y*7+3+y,1);
+                float b = getPRED(coords.x*7+3+x,coords.y*7+3+y,2);
+                acc+=(r+getNEXT(coords.x*7+dx+x,coords.y*7+dy+y,0));
+                acc+=(g+getNEXT(coords.x*7+dx+x,coords.y*7+dy+y,1));
+                acc+=(b+getNEXT(coords.x*7+dx+x,coords.y*7+dy+y,2));
+              }
+            }
+            setOutput(abs(acc)/(49.0*1.0));
+
             }
         `
         }
@@ -172,23 +184,22 @@ class App extends React.Component {
             let t;
             if (nv) {
               t = tf.zeros([1, 14, 35, 3], 'float32')
-              // let currentT = backend.getTexture(tensorn.dataId);
-              // let predT = backend.getTexture(tensorc.dataId);
-              // let outT = backend.getTexture(t.dataId);
 
-              //const x = tf.tensor([1, 2, 3, 4]);
-              let program1 = squareAndAddKernel(t.shape);
-              const result = backend.compileAndRun(program1, [tensorc, tensorn]);
-              console.log('result: ', result);
-
-              //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-              return result.reshape([14, 35, 3]).maximum(0).minimum(255).toInt()//.slice([0, 0, 3], [14, 35, 3]);
+              let program1 = squareAndAddKernel([14, 35, 7, 7]);
+              let result = backend.compileAndRun(program1, [tensorc, tensorn]);
+              //console.log('result: ', result);
+              t = result.reshape([1, 14, 35, 49])
+              //result = result.reshape([14, 35, 49]).slice([0, 0, 0], [14, 35, 3]).maximum(0).minimum(255).toInt()//.slice([0, 0, 3], [14, 35, 3]);
+              //tf.browser.toPixels(result, canvas)
             } else {
-              t = modelPrep.predict([tensorc, tensorn])
+              t = modelPrep.predict([tensorc, tensorn]).reshape([14, 35, 49])//.slice([0, 0, 0], [14, 35, 3]).maximum(0).minimum(255).toInt()
+
+              //tf.browser.toPixels(result, canvas2)
             }
+
             // 1, 14,35,49
-            console.log(t)
-            let res = t//modelOpticalFlow.predict(t)
+            //console.log(t)
+            let res = modelOpticalFlow.predict(t)
             let sum = res.reshape([nh, nw, dk * dk, 1]).relu().pow(2).sum(-2)
 
             let p = res.reshape([nh, nw, dk, dk, 1])
@@ -213,12 +224,14 @@ class App extends React.Component {
           result.dispose();
           requestAnimationFrame(update)
         }).catch(err => {
+          console.log('err: ', err);
           log(err.message)
         })
       }
 
       requestAnimationFrame(update)
     } catch (err) {
+      console.log('err: ', err);
       log(err.message)
     }
   }
@@ -228,6 +241,7 @@ class App extends React.Component {
       <div className="App">
         <video id='video' style={{ maxHeight: '200px' }}></video>
         <canvas id='result' style={{ width: '20%' }} ></canvas>
+        <canvas id='result2' style={{ width: '20%' }} ></canvas>
         <div id="but" onClick={() => {
           this.initClass().catch(err => { console.error(err); document.body.innerText = err.message })
         }}>PlayClass</div>
