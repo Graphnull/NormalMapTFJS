@@ -24,7 +24,7 @@ class App extends React.Component {
         model.internalInputShapes[0] = [null,null,null,3]
 
         textElement.innerHTML = 'loaded'
-        let stream = await navigator.mediaDevices.getUserMedia({ video: {width:512, height:512},facingMode: "environment" })
+        let stream = await navigator.mediaDevices.getUserMedia({ video: {aspectRatio: {ideal: 1},facingMode: "environment" }})
 
         textElement.innerHTML = 'capture'
         let video = document.getElementById('video')
@@ -71,7 +71,7 @@ class App extends React.Component {
         <canvas id='result'></canvas>
         <div id="but" onClick={()=>{
           this.init().catch(err=>{console.error(err);document.body.innerText= err.message})
-        }}>Play</div>
+        }}>Play(v3)</div>
       </div>
     );
   }
