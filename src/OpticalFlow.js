@@ -159,17 +159,20 @@ class App extends React.Component {
             //14, 35, 49
             int dx = coords.z;
             int dy = coords.w;
-            int cx = coords.x + int(getBACK(int(float(coords.x)/${inputShape[1]}.0*${backSize[1]}.0),int(float(coords.y)/${inputShape[0]}.0*${backSize[0]}.0),0));
-            int cy = coords.y + int(getBACK(int(float(coords.x)/${inputShape[1]}.0*${backSize[1]}.0),int(float(coords.y)/${inputShape[0]}.0*${backSize[0]}.0),1));
+
+            int cx = coords.x;
+            int addX = int(getBACK(int((float(coords.x)/${inputShape[0]}.0)*${backSize[0]}.0),int((float(coords.y)/${inputShape[1]}.0)*${backSize[1]}.0),0));
+            int cy = coords.y;
+            int addY = int(getBACK(int((float(coords.x)/${inputShape[0]}.0)*${backSize[0]}.0),int((float(coords.y)/${inputShape[1]}.0)*${backSize[1]}.0),1));
             float acc = 0.0;
             for(int y=0;y!=7;y++){
               for(int x = 0;x!=7;x++){
                 float r = getPRED(cx*4+3+x,cy*4+3+y,0);
                 float g = getPRED(cx*4+3+x,cy*4+3+y,1);
                 float b = getPRED(cx*4+3+x,cy*4+3+y,2);
-                acc+=abs(r-getNEXT(cx*4+dx+x,cy*4+dy+y,0));
-                acc+=abs(g-getNEXT(cx*4+dx+x,cy*4+dy+y,1));
-                acc+=abs(b-getNEXT(cx*4+dx+x,cy*4+dy+y,2));
+                acc+=abs(r-getNEXT(cx*4+addY+dx+x,cy*4+addX+dy+y,0));
+                acc+=abs(g-getNEXT(cx*4+addY+dx+x,cy*4+addX+dy+y,1));
+                acc+=abs(b-getNEXT(cx*4+addY+dx+x,cy*4+addX+dy+y,2));
               }
             }
             setOutput((acc)/(49.0*1.0));
@@ -269,7 +272,7 @@ class App extends React.Component {
             tf.browser.toPixels(out, canvas)
 
             // 2 step
-            let back2 = tf.concat([xp, yp], -1)
+            let back2 = tf.concat([xp, yp], -1).resizeBilinear([py,px]).mul(2)
             px = Math.floor((current2.shape[2] - 7) / 4)
             py = Math.floor((current2.shape[1] - 7) / 4)
             dx = Math.floor(px / 2)
@@ -283,14 +286,11 @@ class App extends React.Component {
             t = (result.reshape([1, dy, dx, 49]))
 
             pos = t.reshape([t.shape[1], t.shape[2], 49]).argMin(-1)
-            console.log('pos: ', pos.dataSync());
 
             xp = pos.mod(dk).sub(3).expandDims(-1);
             yp = pos.floorDiv(dk).sub(3).expandDims(-1);
 
-            out = tf.concat([xp, yp], -1)/*.add(back2.resizeBilinear(xp.shape.slice(0, 2)))*/.concat([tf.zeros(xp.shape)], -1).mul(27).add(127).maximum(0).minimum(255).toInt();
-
-            console.log('result: ', result);
+            out = tf.concat([xp, yp], -1).add(back2.resizeBilinear(xp.shape.slice(0, 2))).concat([tf.zeros(xp.shape)], -1).mul(18).add(127).maximum(0).minimum(255).toInt();
 
             tf.browser.toPixels(out, canvas2)
             //console.log('out: ', out);
