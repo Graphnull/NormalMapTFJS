@@ -90,22 +90,31 @@ class App extends React.Component {
     }
     log('started')
     try {
-      let modelOpticalFlow = await tf.loadLayersModel('/NormalMapTFJS/ks7_dil1_25_0.007120296359062195/model.json');
-      let modelPrep = this.getPrepModel()
+      //let modelOpticalFlow = await tf.loadLayersModel('/NormalMapTFJS/ks7_dil1_15_0.009646461345255375/model.json');
+      //let modelPrep = this.getPrepModel()
       let video;
-      // video = document.getElementById('video')
+      video = await new Promise((res) => { let img = new Image(); img.onload = () => res(img); img.src = '/NormalMapTFJS/frame_0002.png' })
+      let video2 = await new Promise((res) => { let img = new Image(); img.onload = () => res(img); img.src = '/NormalMapTFJS/frame_0001.png' })
+      //video = document.getElementById('video')
+      //let stream = await navigator.mediaDevices.getUserMedia({ video: { aspectRatio: { ideal: 0.5 }, facingMode: "environment" } })
       //video.srcObject = stream;
       //await video.play()
       let canvas = document.getElementById('result')
       let canvas2 = document.getElementById('result2')
+
+
+      let height = video.videoHeight || video.naturalHeight
+      let width = video.videoWidth || video.naturalWidth
+      console.log('height: ', height, width);
       let current = tf.zeros([1, height, width, 3]);
       let pred = tf.zeros([1, height, width, 3]);
+      let current2 = tf.zeros([1, height / 2, width / 2, 3]);
+      let pred2 = tf.zeros([1, height / 2, width / 2, 3]);
+      let current4 = tf.zeros([1, height / 4, width / 4, 3]);
+      let pred4 = tf.zeros([1, height / 4, width / 4, 3]);
 
       let backend = tf.backend()
-      let ENGINE = tf.engine();
-      let gl = backend.gpgpu.gl;
 
-      video = await new Promise((res) => { let img = new Image(); img.onload = () => res(img); img.src = '/NormalMapTFJS/test.png' })
       let uv = tf.tensor([0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0,
         0, 1, 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1,
         0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 2, 6, 2,
@@ -113,13 +122,8 @@ class App extends React.Component {
         0, 4, 1, 4, 2, 4, 3, 4, 4, 4, 5, 4, 6, 4,
         0, 5, 1, 5, 2, 5, 3, 5, 4, 5, 5, 5, 6, 5,
         0, 6, 1, 6, 2, 6, 3, 6, 4, 6, 5, 6, 6, 6], [7, 7, 2]).sub(3)
-      let zeros = tf.zeros([14, 35, 1]);
-      let ctime = 0;
 
-
-      let nv = false;
       const squareAndAddKernel = inputShape => {
-        let [count, height, width, channels] = inputShape
         return {
           variableNames: ['PRED', 'NEXT'],
           outputShape: inputShape.slice(),
@@ -129,85 +133,177 @@ class App extends React.Component {
             //14, 35, 49
             int dx = coords.z;
             int dy = coords.w;
-
             float acc = 0.0;
             for(int y=0;y!=7;y++){
               for(int x = 0;x!=7;x++){
-                float r = getPRED(coords.x*7+3+x,coords.y*7+3+y,0);
-                float g = getPRED(coords.x*7+3+x,coords.y*7+3+y,1);
-                float b = getPRED(coords.x*7+3+x,coords.y*7+3+y,2);
-                acc+=(r+getNEXT(coords.x*7+dx+x,coords.y*7+dy+y,0));
-                acc+=(g+getNEXT(coords.x*7+dx+x,coords.y*7+dy+y,1));
-                acc+=(b+getNEXT(coords.x*7+dx+x,coords.y*7+dy+y,2));
+                float r = getPRED(coords.x*4+3+x,coords.y*4+3+y,0);
+                float g = getPRED(coords.x*4+3+x,coords.y*4+3+y,1);
+                float b = getPRED(coords.x*4+3+x,coords.y*4+3+y,2);
+                acc+=abs(r-getNEXT(coords.x*4+dx+x,coords.y*4+dy+y,0));
+                acc+=abs(g-getNEXT(coords.x*4+dx+x,coords.y*4+dy+y,1));
+                acc+=abs(b-getNEXT(coords.x*4+dx+x,coords.y*4+dy+y,2));
               }
             }
-            setOutput(abs(acc)/(49.0*1.0));
-
+            setOutput(acc/(49.0*1.0));
             }
         `
         }
       }
+      const findKernel = (inputShape, backSize) => {
+        return {
+          variableNames: ['BACK', 'PRED', 'NEXT'],
+          outputShape: inputShape.slice(),
+          userCode: `
+          void main() {
+            ivec4 coords = getOutputCoords();
+            //14, 35, 49
+            int dx = coords.z;
+            int dy = coords.w;
+            int cx = coords.x + int(getBACK(int(float(coords.x)/${inputShape[1]}.0*${backSize[1]}.0),int(float(coords.y)/${inputShape[0]}.0*${backSize[0]}.0),0));
+            int cy = coords.y + int(getBACK(int(float(coords.x)/${inputShape[1]}.0*${backSize[1]}.0),int(float(coords.y)/${inputShape[0]}.0*${backSize[0]}.0),1));
+            float acc = 0.0;
+            for(int y=0;y!=7;y++){
+              for(int x = 0;x!=7;x++){
+                float r = getPRED(cx*4+3+x,cy*4+3+y,0);
+                float g = getPRED(cx*4+3+x,cy*4+3+y,1);
+                float b = getPRED(cx*4+3+x,cy*4+3+y,2);
+                acc+=abs(r-getNEXT(cx*4+dx+x,cy*4+dy+y,0));
+                acc+=abs(g-getNEXT(cx*4+dx+x,cy*4+dy+y,1));
+                acc+=abs(b-getNEXT(cx*4+dx+x,cy*4+dy+y,2));
+              }
+            }
+            setOutput((acc)/(49.0*1.0));
+            }
+        `
+        }
+      }
+      const blurKernel = inputShape => {
+        return {
+          variableNames: ['IMG'],
+          outputShape: inputShape.slice(),
+          userCode: `
+          void main() {
+            ivec3 coords = getOutputCoords();
 
+            int d = coords.z;
+            float acc = 0.0;
+            
+            acc+=getIMG(coords.x*2-1,coords.y*2-1,d);
+            acc+=getIMG(coords.x*2-0,coords.y*2-1,d);
+            acc+=getIMG(coords.x*2+1,coords.y*2-1,d);
+            acc+=getIMG(coords.x*2-1,coords.y*2-0,d);
+            acc+=getIMG(coords.x*2-0,coords.y*2-0,d);
+            acc+=getIMG(coords.x*2+1,coords.y*2-0,d);
+            acc+=getIMG(coords.x*2-1,coords.y*2+1,d);
+            acc+=getIMG(coords.x*2-0,coords.y*2+1,d);
+            acc+=getIMG(coords.x*2+1,coords.y*2+1,d);
+            
+            
+            setOutput(acc/(9.0));
+            }
+        `
+        }
+      }
 
       let update = () => {
         let result = null;
         let time = new Date()
         try {
 
-          if (pred) {
-            pred.dispose();
-          }
-          pred = current;
+          // if (pred) {
+          //   pred.dispose();
+          // }
+          // pred = current;
 
-          current = tf.browser.fromPixels(video).expandDims()
-          //log([current.shape[2], current.shape[1], width, height])
-          //480 313 256 109
-          if (current.shape[2] !== width || current.shape[1] !== height) {
-            let temp = current;
-            current = current.resizeBilinear([height, width])
-            temp.dispose();
-          }
+          current2 = tf.browser.fromPixels(video).expandDims().div(255)
 
+          let temp = current2;
+          current2 = current2.resizeBilinear([height / 2, width / 2])
+          temp.dispose();
+          temp = current4
+          current4 = current2.resizeBilinear([height / 4, width / 4])
+          temp.dispose();
+
+          pred2 = tf.browser.fromPixels(video2).expandDims().div(255)
+          temp = pred2;
+          pred2 = pred2.resizeBilinear([height / 2, width / 2])
+          temp.dispose();
+          temp = pred4;
+          pred4 = pred2.resizeBilinear([height / 4, width / 4])
+          temp.dispose();
 
           result = tf.tidy(() => {
-            //log('req1')
-            let nw = Math.floor((width - ks - 1) / dk)
-            let nh = Math.floor((height - ks - 1) / dk)
-            let tensorc = pred.slice([0, 0, 0, 0], [1, height - hdk, width - hdk, 3])
-            let tensorn = current.slice([0, 0, 0, 0], [1, height - hdk, width - hdk, 3]).div(-1)
 
-            //let time = new Date()
-            //console.log(tensorc, tensorn, modelPrep.predict([tensorc, tensorn]).dataSync());
-            //console.log(new Date() - time)
+            let x = 0;
+            let y = 0;
 
-
+            let px = Math.floor((current4.shape[2] - 7) / 4)
+            let py = Math.floor((current4.shape[1] - 7) / 4)
+            let dx = Math.floor(px / 2)
+            let dy = Math.floor(py / 2)
             let t;
-            if (nv) {
-              t = tf.zeros([1, 14, 35, 3], 'float32')
 
-              let program1 = squareAndAddKernel([14, 35, 7, 7]);
-              let result = backend.compileAndRun(program1, [tensorc, tensorn]);
-              //console.log('result: ', result);
-              t = result.reshape([1, 14, 35, 49])
-              //result = result.reshape([14, 35, 49]).slice([0, 0, 0], [14, 35, 3]).maximum(0).minimum(255).toInt()//.slice([0, 0, 3], [14, 35, 3]);
-              //tf.browser.toPixels(result, canvas)
-            } else {
-              t = modelPrep.predict([tensorc, tensorn]).reshape([14, 35, 49])//.slice([0, 0, 0], [14, 35, 3]).maximum(0).minimum(255).toInt()
+            let result = backend.compileAndRun(findKernel([py, px, 7, 7], [2, 2]), [tf.tensor([0, 0, 0, 0, 0, 0, 0, 0], [2, 2, 2]), pred4, current4]);
+            result = result.reshape([result.shape[0], result.shape[1], 7 * 7])
 
-              //tf.browser.toPixels(result, canvas2)
-            }
+            t = (result.reshape([1, py, px, 49]))
 
-            // 1, 14,35,49
-            //console.log(t)
-            let res = modelOpticalFlow.predict(t)
-            let sum = res.reshape([nh, nw, dk * dk, 1]).relu().pow(2).sum(-2)
+            let shift = t.reshape([py * px, 7, 7, 1]).mean(-4)
+            let shiftRes = shift.reshape([7 * 7]).argMin().dataSync()[0]
+            x = Math.floor(shiftRes % 7) - 3
+            y = Math.floor(shiftRes / 7) - 3
 
-            let p = res.reshape([nh, nw, dk, dk, 1])
+            result = backend.compileAndRun(findKernel([py, px, 7, 7], [2, 2]), [tf.tensor([x, y, x, y, x, y, x, y], [2, 2, 2]), pred4, current4]);
+            t = (result.reshape([1, py, px, 49]))
+
+            let program2 = blurKernel([dy, dx, 49]);
+            result = backend.compileAndRun(program2, [result.reshape([py, px, 49])]);
+            t = (result.reshape([1, dy, dx, 49]))
+
+            let pos = t.reshape([t.shape[1], t.shape[2], 49]).argMin(-1)
+
+            let xp = pos.mod(dk).sub(3).expandDims(-1).add(x);
+            let yp = pos.floorDiv(dk).sub(3).expandDims(-1).add(y);
+
+            let out = tf.concat([xp, yp, tf.zeros(xp.shape)], -1).mul(27).add(127).maximum(0).minimum(255).toInt();
+            tf.browser.toPixels(out, canvas)
+
+            // 2 step
+            let back2 = tf.concat([xp, yp], -1)
+            px = Math.floor((current2.shape[2] - 7) / 4)
+            py = Math.floor((current2.shape[1] - 7) / 4)
+            dx = Math.floor(px / 2)
+            dy = Math.floor(py / 2)
+
+            result = backend.compileAndRun(findKernel([py, px, 7, 7], back2.shape.slice(0, 2)), [back2, pred2, current2]);
+            t = (result.reshape([1, py, px, 49]))
+
+            program2 = blurKernel([dy, dx, 49]);
+            result = backend.compileAndRun(program2, [result.reshape([py, px, 49])]);
+            t = (result.reshape([1, dy, dx, 49]))
+
+            pos = t.reshape([t.shape[1], t.shape[2], 49]).argMin(-1)
+            console.log('pos: ', pos.dataSync());
+
+            xp = pos.mod(dk).sub(3).expandDims(-1);
+            yp = pos.floorDiv(dk).sub(3).expandDims(-1);
+
+            out = tf.concat([xp, yp], -1)/*.add(back2.resizeBilinear(xp.shape.slice(0, 2)))*/.concat([tf.zeros(xp.shape)], -1).mul(27).add(127).maximum(0).minimum(255).toInt();
+
+            console.log('result: ', result);
+
+            tf.browser.toPixels(out, canvas2)
+            //console.log('out: ', out);
+            return out;
+            let res = t//modelOpticalFlow.predict(t)
+            let sum = res.reshape([res.shape[1], res.shape[2], dk * dk, 1]).relu().pow(2).sum(-2)
+
+            let p = res.reshape([res.shape[1], res.shape[2], dk, dk, 1])
 
             p = p.concat([p], -1).pow(2).mul(uv).sum(-2).sum(-2)
 
             sum = sum.concat([sum], -1)
-            let result2 = tf.concat([p.div(sum), zeros], -1).mul(3)
+            let result2 = tf.concat([p.div(sum).add([y, x]), tf.zeros(p.shape)], -1).mul(3)
             return result2.mul(9).add(127).maximum(0).minimum(255).toInt();
 
           })
@@ -215,24 +311,26 @@ class App extends React.Component {
           console.log('err: ', err);
 
           log(err.message)
+          log(err.stack)
         }
-        //console.log(result, canvas);
-        tf.browser.toPixels(result, canvas).then(() => {
-          ctime = ctime * 0.9 + (new Date() - time) * 0.1
-          console.log('time', ctime)
-          //log('req3')
-          result.dispose();
-          requestAnimationFrame(update)
-        }).catch(err => {
-          console.log('err: ', err);
-          log(err.message)
-        })
+        // tf.browser.toPixels(result, canvas).then(() => {
+        //   ctime = ctime * 0.9 + (new Date() - time) * 0.1
+        //   console.log('time', ctime)
+        //   //log('req3')
+        //   result.dispose();
+        //   requestAnimationFrame(update)
+        // }).catch(err => {
+        //   console.log('err: ', err);
+        //   log(err.message)
+        //   log(err.stack)
+        // })
       }
 
       requestAnimationFrame(update)
     } catch (err) {
       console.log('err: ', err);
       log(err.message)
+      log(err.stack)
     }
   }
   render() {
@@ -240,8 +338,8 @@ class App extends React.Component {
     return (
       <div className="App">
         <video id='video' style={{ maxHeight: '200px' }}></video>
-        <canvas id='result' style={{ width: '20%' }} ></canvas>
-        <canvas id='result2' style={{ width: '20%' }} ></canvas>
+        <canvas id='result' style={{ width: '30%' }} ></canvas>
+        <canvas id='result2' style={{ width: '30%' }} ></canvas>
         <div id="but" onClick={() => {
           this.initClass().catch(err => { console.error(err); document.body.innerText = err.message })
         }}>PlayClass</div>
